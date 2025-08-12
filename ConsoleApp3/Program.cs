@@ -503,4 +503,143 @@ public class StudentResultProcessor
     }
 }
 
+// =========================
+// QUESTION 5 - Inventory Logger (records & file IO)
+// =========================
+
+public interface IInventoryEntity
+{
+    int Id { get; }
+}
+
+public record InventoryItem(int Id, string Name, int Quantity, DateTime DateAdded) : IInventoryEntity;
+
+public class InventoryLogger<T> where T : IInventoryEntity
+{
+    private readonly List<T> _log = new();
+    private readonly string _filePath;
+
+    public InventoryLogger(string filePath)
+    {
+        _filePath = filePath;
+    }
+
+    public void Add(T item) => _log.Add(item);
+
+    public List<T> GetAll() => new List<T>(_log);
+
+    public void SaveToFile()
+    {
+        try
+        {
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            var json = JsonSerializer.Serialize(_log, options);
+            File.WriteAllText(_filePath, json);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving to file: {ex.Message}");
+        }
+    }
+
+    public void LoadFromFile()
+    {
+        try
+        {
+            if (!File.Exists(_filePath)) return;
+            var json = File.ReadAllText(_filePath);
+            var items = JsonSerializer.Deserialize<List<T>>(json);
+            _log.Clear();
+            if (items != null) _log.AddRange(items);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading from file: {ex.Message}");
+        }
+    }
+}
+
+public class InventoryApp
+{
+    private readonly InventoryLogger<InventoryItem> _logger;
+
+    public InventoryApp(string filePath)
+    {
+        _logger = new InventoryLogger<InventoryItem>(filePath);
+    }
+
+    public void SeedSampleData()
+    {
+        _logger.Add(new InventoryItem(1, "Screwdriver", 15, DateTime.Now));
+        _logger.Add(new InventoryItem(2, "Hammer", 7, DateTime.Now));
+        _logger.Add(new InventoryItem(3, "Nails (100)", 200, DateTime.Now));
+    }
+
+    public void SaveData() => _logger.SaveToFile();
+
+    public void LoadData() => _logger.LoadFromFile();
+
+    public void PrintAllItems()
+    {
+        Console.WriteLine("\n--- Inventory items ---");
+        foreach (var it in _logger.GetAll())
+        {
+            Console.WriteLine($"ID: {it.Id}, Name: {it.Name}, Qty: {it.Quantity}, Added: {it.DateAdded}");
+        }
+    }
+}
+
+// =========================
+// Program Main - Run demos
+// =========================
+
+public class Program
+{
+    public static void Main()
+    {
+        // Q1
+        var finance = new FinanceApp();
+        finance.Run();
+
+        // Q2
+        var health = new HealthSystemApp();
+        health.Run();
+
+        // Q3
+        var warehouse = new WareHouseManager();
+        warehouse.Run();
+
+        // Q4 - student file demo
+        var studentProcessor = new StudentResultProcessor();
+        string inputFile = "students_input.txt";
+        string outputFile = "students_report.txt";
+
+        // OPTIONAL: create a sample input file if none exists to demo behavior.
+        if (!File.Exists(inputFile))
+        {
+            File.WriteAllLines(inputFile, new[]
+            {
+                "101, Alice Smith, 84",
+                "102, Bob Johnson, 73",
+                "103, Charlie Brown, 49"
+            });
+            Console.WriteLine($"Sample input file '{inputFile}' created for demo.");
+        }
+
+        studentProcessor.RunDemo(inputFile, outputFile);
+
+        // Q5 - inventory logger demo
+        var inventoryApp = new InventoryApp("inventory_log.json");
+        inventoryApp.SeedSampleData();
+        inventoryApp.SaveData();
+
+        // Simulate new session: create new app and load file
+        var newInventoryAppSession = new InventoryApp("inventory_log.json");
+        newInventoryAppSession.LoadData();
+        newInventoryAppSession.PrintAllItems();
+
+        Console.WriteLine("\nAll demos completed.");
+    }
+}
+
 
