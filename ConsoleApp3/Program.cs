@@ -400,3 +400,107 @@ public class WareHouseManager
     }
 }
 
+// =========================
+// QUESTION 4 - Student Grades from File
+// =========================
+
+public class Student
+{
+    public int Id { get; }
+    public string FullName { get; }
+    public int Score { get; }
+
+    public Student(int id, string fullName, int score)
+    {
+        Id = id; FullName = fullName; Score = score;
+    }
+
+    public string GetGrade()
+    {
+        return Score switch
+        {
+            >= 80 and <= 100 => "A",
+            >= 70 and <= 79 => "B",
+            >= 60 and <= 69 => "C",
+            >= 50 and <= 59 => "D",
+            _ => "F"
+        };
+    }
+}
+
+public class InvalidScoreFormatException : Exception { public InvalidScoreFormatException(string msg) : base(msg) { } }
+public class MissingFieldException : Exception { public MissingFieldException(string msg) : base(msg) { } }
+
+public class StudentResultProcessor
+{
+    public List<Student> ReadStudentsFromFile(string inputFilePath)
+    {
+        var students = new List<Student>();
+
+        using var reader = new StreamReader(inputFilePath);
+        string? line;
+        int lineNo = 0;
+        while ((line = reader.ReadLine()) != null)
+        {
+            lineNo++;
+            if (string.IsNullOrWhiteSpace(line)) continue;
+
+            var parts = line.Split(',');
+            if (parts.Length < 3)
+                throw new MissingFieldException($"Line {lineNo}: Missing fields. Expected 3 values.");
+
+            var idPart = parts[0].Trim();
+            var namePart = parts[1].Trim();
+            var scorePart = parts[2].Trim();
+
+            if (!int.TryParse(idPart, out var id))
+                throw new InvalidScoreFormatException($"Line {lineNo}: ID '{idPart}' is not a valid integer.");
+
+            if (!int.TryParse(scorePart, out var score))
+                throw new InvalidScoreFormatException($"Line {lineNo}: Score '{scorePart}' is not a valid integer.");
+
+            students.Add(new Student(id, namePart, score));
+        }
+
+        return students;
+    }
+
+    public void WriteReportToFile(List<Student> students, string outputFilePath)
+    {
+        using var writer = new StreamWriter(outputFilePath);
+        foreach (var s in students)
+        {
+            writer.WriteLine($"{s.FullName} (ID: {s.Id}): Score = {s.Score}, Grade = {s.GetGrade()}");
+        }
+    }
+
+    public void RunDemo(string inputPath, string outputPath)
+    {
+        Console.WriteLine("\n--- StudentResultProcessor Start ---");
+        try
+        {
+            var students = ReadStudentsFromFile(inputPath);
+            WriteReportToFile(students, outputPath);
+            Console.WriteLine($"Report written to {outputPath}");
+        }
+        catch (FileNotFoundException ex)
+        {
+            Console.WriteLine($"File not found: {ex.Message}");
+        }
+        catch (MissingFieldException ex)
+        {
+            Console.WriteLine($"Missing field error: {ex.Message}");
+        }
+        catch (InvalidScoreFormatException ex)
+        {
+            Console.WriteLine($"Invalid score format: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Unexpected error: {ex.Message}");
+        }
+        Console.WriteLine("--- StudentResultProcessor End ---\n");
+    }
+}
+
+
